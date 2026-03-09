@@ -1,15 +1,21 @@
 # holded-mcp-server
 
-Servidor MCP (Model Context Protocol) para integrar **Holded** con **Claude Code**, **Claude Desktop** y cualquier cliente MCP compatible.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-green.svg)](https://nodejs.org/)
+[![MCP SDK](https://img.shields.io/badge/MCP_SDK-1.27-purple.svg)](https://modelcontextprotocol.io/)
 
-Expone 25 herramientas (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos.
+Servidor MCP (Model Context Protocol) para integrar **[Holded](https://www.holded.com/)** con **Claude Code**, **Claude Desktop** y cualquier cliente MCP compatible.
 
-Desarrollado por **APOGEA Consultores** (Agustí Jardí).
+Expone **25 herramientas** (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos de la API de facturación de Holded.
+
+Desarrollado por **[APOGEA Consultores](https://apogea.pro/)** (Agustí Jardí).
 
 ## Requisitos previos
 
 - **Node.js** >= 18 ([descargar](https://nodejs.org/))
+- **Git** ([descargar](https://git-scm.com/))
 - **API Key de Holded** (ver [Cómo obtener la API Key](#cómo-obtener-la-api-key-de-holded))
+- **Claude Code** o **Claude Desktop** instalado
 
 ## Instalación
 
@@ -27,7 +33,9 @@ npm run build
 
 Tras estos pasos, el servidor estará listo en `build/index.js`.
 
-## Configuración con Claude Code
+## Configuración
+
+### Con Claude Code
 
 Añade la siguiente entrada al fichero `.mcp.json` de tu proyecto (o a `~/.claude.json` para que esté disponible en todos los proyectos):
 
@@ -50,7 +58,7 @@ Añade la siguiente entrada al fichero `.mcp.json` de tu proyecto (o a `~/.claud
 
 Reinicia Claude Code y comprueba que funciona con el comando `/mcp` — el servidor `holded` debe aparecer como **connected**.
 
-## Configuración con Claude Desktop
+### Con Claude Desktop
 
 Edita el fichero de configuración de Claude Desktop:
 
@@ -62,15 +70,11 @@ Edita el fichero de configuración de Claude Desktop:
 Añade dentro de `"mcpServers"`:
 
 ```json
-{
-  "mcpServers": {
-    "holded": {
-      "command": "node",
-      "args": ["/ruta/absoluta/a/holded-mcp-server/build/index.js"],
-      "env": {
-        "HOLDED_API_KEY": "tu_api_key_aqui"
-      }
-    }
+"holded": {
+  "command": "node",
+  "args": ["/ruta/absoluta/a/holded-mcp-server/build/index.js"],
+  "env": {
+    "HOLDED_API_KEY": "tu_api_key_aqui"
   }
 }
 ```
@@ -135,6 +139,15 @@ Una vez conectado, puedes hacer peticiones en lenguaje natural a Claude:
 - *"Envía el presupuesto P-2026-003 al email cliente@empresa.com"*
 - *"Muéstrame las facturas de compra pendientes de pago"*
 
+## Cómo obtener la API Key de Holded
+
+1. Inicia sesión en [Holded](https://app.holded.com/)
+2. Ve a **Configuración** (icono engranaje) > **Desarrolladores**
+3. Haz click en **Nueva API Key**
+4. Copia la clave generada y úsala como `HOLDED_API_KEY`
+
+> **Seguridad**: La API key da acceso a los datos de facturación de tu cuenta de Holded. Guárdala siempre como variable de entorno y nunca la incluyas directamente en el código fuente.
+
 ## Desarrollo
 
 ```bash
@@ -147,7 +160,7 @@ npm run build  # Compilación completa
 ```
 src/
 ├── index.ts              # Entry point (McpServer + StdioServerTransport)
-├── holded-client.ts      # Cliente HTTP para la API de Holded
+├── holded-client.ts      # Cliente HTTP para la API de Holded (retry 429)
 ├── types/
 │   └── holded.ts         # Interfaces TypeScript
 └── tools/
@@ -158,14 +171,14 @@ src/
     └── estimates.ts      # 6 tools de presupuestos
 ```
 
-## Cómo obtener la API Key de Holded
+### Stack técnico
 
-1. Inicia sesión en [Holded](https://app.holded.com/)
-2. Ve a **Configuración** (icono engranaje) > **Desarrolladores**
-3. Haz click en **Nueva API Key**
-4. Copia la clave generada y úsala como `HOLDED_API_KEY`
-
-> La API key da acceso a los datos de tu cuenta de Holded. No la compartas ni la subas a repositorios públicos.
+- **Runtime**: Node.js >= 18
+- **Lenguaje**: TypeScript (strict mode)
+- **SDK**: [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk) v1.27+
+- **Validación**: [zod](https://zod.dev/) v4
+- **Transporte**: stdio (JSON-RPC)
+- **HTTP**: fetch nativo (Node 18+)
 
 ## Solución de problemas
 
@@ -177,6 +190,10 @@ src/
 | Error `429` (rate limit) | El servidor reintenta automáticamente. Si persiste, espera unos segundos |
 | No compila (`npm run build` falla) | Asegúrate de tener Node.js >= 18 y haber ejecutado `npm install` |
 
+## Contribuir
+
+Las contribuciones son bienvenidas. Abre un [issue](https://github.com/JardiMargalefAgusti/holded-mcp-server/issues) o envía un pull request.
+
 ## Licencia
 
-MIT
+[MIT](LICENSE) - APOGEA Consultores
