@@ -1,0 +1,38 @@
+{
+  "name": "holded-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Holded invoicing API",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "holded-mcp-server": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "holded",
+    "invoicing",
+    "erp",
+    "claude"
+  ],
+  "author": "APOGEA Consultores",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JardiMargalefAgusti/holded-mcp-server.git"
+  },
+  "files": [
+    "build"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "typescript": "^5.9.3"
+  }
+}
