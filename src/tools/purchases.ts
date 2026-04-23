@@ -148,4 +148,20 @@ export function registerPurchaseTools(server: McpServer, client: HoldedClient): 
       }
     }
   );
+
+  server.tool(
+    'holded_get_purchase_pdf',
+    'Obtiene el PDF de una factura de compra (devuelve datos en base64). Para descargas por lote, el cliente debe invocar esta tool una vez por cada ID previamente obtenido con holded_list_purchases.',
+    {
+      documentId: z.string().describe('ID de la factura de compra'),
+    },
+    async ({ documentId }) => {
+      try {
+        const result = await client.getDocumentPdf('purchase', documentId);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
 }
