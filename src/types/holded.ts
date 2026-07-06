@@ -91,6 +91,28 @@ export interface HoldedContact {
   contactPersons?: Array<{ personId: string; name: string; email?: string }>;
 }
 
+// CRM: Embudo de ventas (funnel). Esquema permisivo: la API de CRM
+// no está completamente documentada por Holded.
+export interface HoldedFunnel {
+  id: string;
+  name: string;
+  stages?: Array<{ id: string; name: string; [key: string]: unknown }>;
+  [key: string]: unknown;
+}
+
+// CRM: Lead (oportunidad de venta). Esquema permisivo.
+export interface HoldedLead {
+  id: string;
+  name: string;
+  contactId?: string;
+  funnelId?: string;
+  stageId?: string;
+  value?: number;
+  notes?: Array<{ noteId?: string; name?: string; description?: string; [key: string]: unknown }>;
+  tasks?: Array<{ taskId?: string; name?: string; [key: string]: unknown }>;
+  [key: string]: unknown;
+}
+
 // Producto/Servicio
 export interface HoldedProduct {
   id: string;

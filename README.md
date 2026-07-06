@@ -6,7 +6,7 @@
 
 Servidor MCP (Model Context Protocol) para integrar **[Holded](https://www.holded.com/)** con **Claude Code**, **Claude Desktop** y cualquier cliente MCP compatible.
 
-Expone **25 herramientas** (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos de la API de facturación de Holded.
+Expone **42 herramientas** (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos de la API de facturación de Holded, además del módulo **CRM** (leads y embudos de venta).
 
 Desarrollado por **[APOGEA Consultores](https://apogea.pro/)** (Agustí Jardí).
 
@@ -81,7 +81,7 @@ Añade dentro de `"mcpServers"`:
 
 Reinicia Claude Desktop para que detecte el nuevo servidor.
 
-## Tools disponibles (25)
+## Tools disponibles (42)
 
 ### Contactos (3)
 | Tool | Descripción |
@@ -128,6 +128,31 @@ Reinicia Claude Desktop para que detecte el nuevo servidor.
 | `holded_delete_estimate` | Elimina un presupuesto |
 | `holded_send_estimate` | Envía un presupuesto por email |
 
+### CRM — Embudos (5)
+| Tool | Descripción |
+|------|-------------|
+| `holded_list_funnels` | Lista los embudos del CRM con sus etapas |
+| `holded_get_funnel` | Detalle de un embudo por su ID |
+| `holded_create_funnel` | Crea un nuevo embudo |
+| `holded_update_funnel` | Actualiza un embudo existente |
+| `holded_delete_funnel` | Elimina un embudo |
+
+### CRM — Leads (12)
+| Tool | Descripción |
+|------|-------------|
+| `holded_list_leads` | Lista los leads (oportunidades de venta) |
+| `holded_get_lead` | Detalle completo de un lead (notas y tareas incluidas) |
+| `holded_create_lead` | Crea un nuevo lead |
+| `holded_update_lead` | Actualiza un lead existente |
+| `holded_delete_lead` | Elimina un lead |
+| `holded_update_lead_stage` | Mueve un lead a otra etapa del embudo |
+| `holded_update_lead_dates` | Actualiza las fechas de un lead |
+| `holded_create_lead_note` | Añade una nota a un lead |
+| `holded_update_lead_note` | Actualiza una nota de un lead |
+| `holded_create_lead_task` | Crea una tarea asociada a un lead |
+| `holded_update_lead_task` | Actualiza una tarea de un lead |
+| `holded_delete_lead_task` | Elimina una tarea de un lead |
+
 ## Ejemplos de uso
 
 Una vez conectado, puedes hacer peticiones en lenguaje natural a Claude:
@@ -138,6 +163,8 @@ Una vez conectado, puedes hacer peticiones en lenguaje natural a Claude:
 - *"Registra el pago de la factura F-2026-001 por 4.235 EUR"*
 - *"Envía el presupuesto P-2026-003 al email cliente@empresa.com"*
 - *"Muéstrame las facturas de compra pendientes de pago"*
+- *"Crea un lead para Empresa ABC en el embudo Comercial y añade una nota con lo hablado hoy"*
+- *"Mueve el lead de Empresa XYZ a la etapa Negociación"*
 
 ## Cómo obtener la API Key de Holded
 
@@ -168,7 +195,8 @@ src/
     ├── products.ts       # 2 tools de productos
     ├── invoices.ts       # 8 tools de facturas de venta
     ├── purchases.ts      # 6 tools de facturas de compra
-    └── estimates.ts      # 6 tools de presupuestos
+    ├── estimates.ts      # 6 tools de presupuestos
+    └── crm.ts            # 17 tools de CRM (leads y embudos)
 ```
 
 ### Stack técnico

@@ -8,6 +8,7 @@ import { registerProductTools } from './tools/products.js';
 import { registerInvoiceTools } from './tools/invoices.js';
 import { registerPurchaseTools } from './tools/purchases.js';
 import { registerEstimateTools } from './tools/estimates.js';
+import { registerCrmTools } from './tools/crm.js';
 
 async function main(): Promise<void> {
   const apiKey = process.env.HOLDED_API_KEY;
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
   registerInvoiceTools(server, client);
   registerPurchaseTools(server, client);
   registerEstimateTools(server, client);
+  registerCrmTools(server, client);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

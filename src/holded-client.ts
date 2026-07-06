@@ -1,7 +1,10 @@
 import type { HoldedDocType } from './types/holded.js';
 
+// APIs de Holded soportadas (cada una tiene su propio prefijo de ruta)
+type HoldedApi = 'invoicing' | 'crm';
+
 export class HoldedClient {
-  private readonly baseUrl = 'https://api.holded.com/api/invoicing/v1';
+  private static readonly API_ROOT = 'https://api.holded.com/api';
   private readonly apiKey: string;
 
   constructor(apiKey: string) {
@@ -17,11 +20,12 @@ export class HoldedClient {
       method?: string;
       body?: Record<string, unknown>;
       query?: Record<string, string | undefined>;
+      api?: HoldedApi;
     } = {}
   ): Promise<T> {
-    const { method = 'GET', body, query } = options;
+    const { method = 'GET', body, query, api = 'invoicing' } = options;
 
-    const url = new URL(`${this.baseUrl}${path}`);
+    const url = new URL(`${HoldedClient.API_ROOT}/${api}/v1${path}`);
     if (query) {
       for (const [key, value] of Object.entries(query)) {
         if (value !== undefined) {
@@ -148,5 +152,77 @@ export class HoldedClient {
 
   async getProduct(productId: string): Promise<unknown> {
     return this.request<unknown>(`/products/${productId}`);
+  }
+
+  // --- CRM: Embudos (funnels) ---
+
+  async listFunnels(): Promise<unknown[]> {
+    return this.request<unknown[]>('/funnels', { api: 'crm' });
+  }
+
+  async getFunnel(funnelId: string): Promise<unknown> {
+    return this.request<unknown>(`/funnels/${funnelId}`, { api: 'crm' });
+  }
+
+  async createFunnel(body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>('/funnels', { method: 'POST', body, api: 'crm' });
+  }
+
+  async updateFunnel(funnelId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/funnels/${funnelId}`, { method: 'PUT', body, api: 'crm' });
+  }
+
+  async deleteFunnel(funnelId: string): Promise<unknown> {
+    return this.request<unknown>(`/funnels/${funnelId}`, { method: 'DELETE', api: 'crm' });
+  }
+
+  // --- CRM: Leads ---
+
+  async listLeads(): Promise<unknown[]> {
+    return this.request<unknown[]>('/leads', { api: 'crm' });
+  }
+
+  async getLead(leadId: string): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}`, { api: 'crm' });
+  }
+
+  async createLead(body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>('/leads', { method: 'POST', body, api: 'crm' });
+  }
+
+  async updateLead(leadId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}`, { method: 'PUT', body, api: 'crm' });
+  }
+
+  async deleteLead(leadId: string): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}`, { method: 'DELETE', api: 'crm' });
+  }
+
+  async updateLeadStage(leadId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}/stage`, { method: 'PUT', body, api: 'crm' });
+  }
+
+  async updateLeadDates(leadId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}/dates`, { method: 'PUT', body, api: 'crm' });
+  }
+
+  async createLeadNote(leadId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}/notes`, { method: 'POST', body, api: 'crm' });
+  }
+
+  async updateLeadNote(leadId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}/notes`, { method: 'PUT', body, api: 'crm' });
+  }
+
+  async createLeadTask(leadId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}/tasks`, { method: 'POST', body, api: 'crm' });
+  }
+
+  async updateLeadTask(leadId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}/tasks`, { method: 'PUT', body, api: 'crm' });
+  }
+
+  async deleteLeadTask(leadId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/leads/${leadId}/tasks`, { method: 'DELETE', body, api: 'crm' });
   }
 }
