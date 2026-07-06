@@ -1,7 +1,7 @@
 {
   "name": "holded-mcp-server",
-  "version": "1.0.0",
-  "description": "MCP server for Holded invoicing API",
+  "version": "1.1.0",
+  "description": "MCP server for Holded invoicing and CRM API",
   "type": "module",
   "main": "build/index.js",
   "bin": {
@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:exe": "node scripts/build-exe.mjs",
     "dev": "tsc --watch"
   },
   "keywords": [
@@ -33,6 +34,8 @@
   },
   "devDependencies": {
     "@types/node": "^25.3.5",
+    "@yao-pkg/pkg": "^6.20.0",
+    "esbuild": "^0.28.0",
     "typescript": "^5.9.3"
   }
 }

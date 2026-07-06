@@ -6,7 +6,7 @@
 
 Servidor MCP (Model Context Protocol) para integrar **[Holded](https://www.holded.com/)** con **Claude Code**, **Claude Desktop** y cualquier cliente MCP compatible.
 
-Expone **42 herramientas** (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos de la API de facturación de Holded, además del módulo **CRM** (leads y embudos de venta).
+Expone **43 herramientas** (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos de la API de facturación de Holded, además del módulo **CRM** (leads y embudos de venta).
 
 Desarrollado por **[APOGEA Consultores](https://apogea.pro/)** (Agustí Jardí).
 
@@ -18,6 +18,23 @@ Desarrollado por **[APOGEA Consultores](https://apogea.pro/)** (Agustí Jardí).
 - **Claude Code** o **Claude Desktop** instalado
 
 ## Instalación
+
+### Opción A — Instalador .exe (recomendado, sin requisitos)
+
+Descarga `holded-mcp.exe` (o genéralo con `npm run build:exe`) y haz **doble clic**:
+
+1. Pide la **API key de Holded** (y la valida en vivo contra la API).
+2. Instala el ejecutable en `C:\Holded-MCP\` (no necesita Node.js: lo lleva embebido).
+3. Registra el servidor automáticamente en **Claude Code** (`~/.claude.json`) y en **Claude Desktop** (detecta las 3 variantes de Windows: instalador clásico, Local y Microsoft Store), con backup previo de cada config.
+4. Se da de alta en **"Agregar o quitar programas"** para desinstalarlo desde Windows.
+
+Reinicia Claude (Desktop: salir del todo desde la bandeja del sistema) y listo.
+
+El mismo `.exe` es también el **desinstalador**: doble clic → opción `[3] Desinstalar` (o desde "Agregar o quitar programas"). Elimina las entradas de las configs de Claude (con backup), el registro de Windows y la carpeta `C:\Holded-MCP`.
+
+Otros comandos del exe: `holded-mcp.exe status` (dónde está registrado), `register`, `install`, `uninstall`.
+
+### Opción B — Manual con Node.js
 
 ```bash
 # 1. Clonar el repositorio
@@ -81,7 +98,7 @@ Añade dentro de `"mcpServers"`:
 
 Reinicia Claude Desktop para que detecte el nuevo servidor.
 
-## Tools disponibles (42)
+## Tools disponibles (43)
 
 ### Contactos (3)
 | Tool | Descripción |
@@ -108,7 +125,7 @@ Reinicia Claude Desktop para que detecte el nuevo servidor.
 | `holded_send_invoice` | Envía una factura por email |
 | `holded_get_invoice_pdf` | Obtiene el PDF de la factura (base64) |
 
-### Facturas de Compra (6)
+### Facturas de Compra (7)
 | Tool | Descripción |
 |------|-------------|
 | `holded_list_purchases` | Lista facturas de compra (gastos) |
@@ -117,6 +134,7 @@ Reinicia Claude Desktop para que detecte el nuevo servidor.
 | `holded_update_purchase` | Actualiza una factura de compra |
 | `holded_delete_purchase` | Elimina una factura de compra |
 | `holded_pay_purchase` | Registra un pago a proveedor |
+| `holded_get_purchase_pdf` | Descarga el PDF de una factura de compra (base64) |
 
 ### Presupuestos (6)
 | Tool | Descripción |
@@ -178,15 +196,20 @@ Una vez conectado, puedes hacer peticiones en lenguaje natural a Claude:
 ## Desarrollo
 
 ```bash
-npm run dev    # Compilación en modo watch (detecta cambios automáticamente)
-npm run build  # Compilación completa
+npm run dev        # Compilación en modo watch (detecta cambios automáticamente)
+npm run build      # Compilación completa
+npm run build:exe  # Genera dist-exe/holded-mcp.exe (tsc + esbuild + @yao-pkg/pkg)
 ```
+
+El `.exe` es autocontenido (Node 22 embebido, ~80 MB) y actúa como instalador, desinstalador y servidor MCP según cómo se invoque: doble clic → menú; `serve` (lo que lanza Claude) → servidor por stdio. El binario se instala con nombre versionado (`holded-mcp-1.1.0.exe`) para que las actualizaciones nunca choquen con un exe en uso por Claude.
 
 ### Estructura del proyecto
 
 ```
 src/
-├── index.ts              # Entry point (McpServer + StdioServerTransport)
+├── index.ts              # Entry point para Node (llama a runServer)
+├── server.ts             # runServer(): McpServer + registro de tools + stdio
+├── main.ts               # Entry point del .exe (instalador/desinstalador/serve)
 ├── holded-client.ts      # Cliente HTTP para la API de Holded (retry 429)
 ├── types/
 │   └── holded.ts         # Interfaces TypeScript
@@ -194,7 +217,7 @@ src/
     ├── contacts.ts       # 3 tools de contactos
     ├── products.ts       # 2 tools de productos
     ├── invoices.ts       # 8 tools de facturas de venta
-    ├── purchases.ts      # 6 tools de facturas de compra
+    ├── purchases.ts      # 7 tools de facturas de compra
     ├── estimates.ts      # 6 tools de presupuestos
     └── crm.ts            # 17 tools de CRM (leads y embudos)
 ```

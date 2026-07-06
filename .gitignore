@@ -4,3 +4,5 @@ build/
 .mcp.json
 *.tsbuildinfo
 *.js.map
+build-exe/
+dist-exe/
