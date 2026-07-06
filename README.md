@@ -25,12 +25,12 @@ Descarga `holded-mcp.exe` (o genéralo con `npm run build:exe`) y haz **doble cl
 
 1. Pide la **API key de Holded** (y la valida en vivo contra la API).
 2. Instala el ejecutable en `C:\Holded-MCP\` (no necesita Node.js: lo lleva embebido).
-3. Registra el servidor automáticamente en **Claude Code** (`~/.claude.json`) y en **Claude Desktop** (detecta las 3 variantes de Windows: instalador clásico, Local y Microsoft Store), con backup previo de cada config.
+3. Te deja elegir dónde registrarlo — **Claude Code** (`~/.claude.json`), **Claude Desktop** (detecta las 3 variantes de Windows: instalador clásico, Local y Microsoft Store) o todos —, con backup previo de cada config y escritura atómica.
 4. Se da de alta en **"Agregar o quitar programas"** para desinstalarlo desde Windows.
 
 Reinicia Claude (Desktop: salir del todo desde la bandeja del sistema) y listo.
 
-El mismo `.exe` es también el **desinstalador**: doble clic → opción `[3] Desinstalar` (o desde "Agregar o quitar programas"). Elimina las entradas de las configs de Claude (con backup), el registro de Windows y la carpeta `C:\Holded-MCP`.
+El mismo `.exe` es también el **desinstalador**: doble clic → opción `[3] Desinstalar` (o desde "Agregar o quitar programas"). Elimina las entradas de las configs de Claude (con backup), el registro de Windows y la carpeta `C:\Holded-MCP`. Si pierdes el exe, consulta [MANUAL_UNINSTALL.md](MANUAL_UNINSTALL.md).
 
 Otros comandos del exe: `holded-mcp.exe status` (dónde está registrado), `register`, `install`, `uninstall`.
 
@@ -198,6 +198,7 @@ Una vez conectado, puedes hacer peticiones en lenguaje natural a Claude:
 ```bash
 npm run dev        # Compilación en modo watch (detecta cambios automáticamente)
 npm run build      # Compilación completa
+npm test           # Tests del parcheador de configs de Claude (node:test)
 npm run build:exe  # Genera dist-exe/holded-mcp.exe (tsc + esbuild + @yao-pkg/pkg)
 ```
 
@@ -210,6 +211,8 @@ src/
 ├── index.ts              # Entry point para Node (llama a runServer)
 ├── server.ts             # runServer(): McpServer + registro de tools + stdio
 ├── main.ts               # Entry point del .exe (instalador/desinstalador/serve)
+├── claude-config.ts      # Parcheo de configs de Claude (testeado)
+├── claude-config.test.ts # Tests del parcheador (npm test)
 ├── holded-client.ts      # Cliente HTTP para la API de Holded (retry 429)
 ├── types/
 │   └── holded.ts         # Interfaces TypeScript

@@ -10,16 +10,24 @@
  *   status                  → muestra dónde está instalado y registrado
  */
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 import * as readline from 'node:readline';
 import { spawn, spawnSync } from 'node:child_process';
+import {
+  MCP_KEY,
+  type McpServerEntry,
+  resolveDesktopConfigPaths,
+  getClaudeCodeConfigPath,
+  registerServer,
+  removeServer,
+  getServerEntry,
+  findExistingApiKey,
+} from './claude-config.js';
 
 // Inyectada por esbuild en tiempo de build (scripts/build-exe.mjs) desde package.json.
 declare const __APP_VERSION__: string | undefined;
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
 
-const MCP_KEY = 'holded';
 const APP_NAME = 'Holded MCP';
 const INSTALL_DIR = 'C:\\Holded-MCP';
 const EXE_BASENAME = 'holded-mcp';
@@ -50,153 +58,85 @@ function banner(subtitle: string): void {
   log(c.reset);
 }
 
-function pause(message = 'Pulsa Enter para cerrar...'): Promise<void> {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question(`\n${message}`, () => { rl.close(); resolve(); });
+// Entrada de consola robusta: una ÚNICA interfaz readline para todo el
+// programa, con cola de líneas. Así funciona igual en interactivo y con la
+// entrada por tubería (las líneas que llegan entre pregunta y pregunta se
+// encolan en vez de perderse) y un stdin cerrado (EOF) responde '' — es
+// decir, la opción por defecto — en vez de dejar el instalador colgado.
+let stdinEnded = false;
+let inputStarted = false;
+const pendingLines: string[] = [];
+let waiter: ((line: string) => void) | null = null;
+
+function startInput(): void {
+  if (inputStarted) return;
+  inputStarted = true;
+  const iface = readline.createInterface({ input: process.stdin, output: process.stdout });
+  iface.on('line', (line) => {
+    if (waiter) {
+      const w = waiter;
+      waiter = null;
+      w(line);
+    } else {
+      pendingLines.push(line);
+    }
+  });
+  iface.on('close', () => {
+    stdinEnded = true;
+    if (waiter) {
+      const w = waiter;
+      waiter = null;
+      w('');
+    }
   });
 }
 
 function question(prompt: string): Promise<string> {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question(prompt, (answer) => { rl.close(); resolve(answer); });
-  });
-}
-
-// ---------- rutas de config de Claude ----------
-const CONFIG_FILE = 'claude_desktop_config.json';
-
-/**
- * Devuelve TODAS las rutas de claude_desktop_config.json donde hay que registrar.
- * En Windows, Claude Desktop puede vivir en tres sitios:
- *   1) Instalador clásico   → %APPDATA%\Claude
- *   2) Variante Local       → %LOCALAPPDATA%\Claude
- *   3) Microsoft Store/MSIX → %LOCALAPPDATA%\Packages\*claude*\LocalCache\Roaming\<Claude*>
- */
-function resolveDesktopConfigPaths(): string[] {
-  const targets: string[] = [];
-
-  if (process.platform === 'win32') {
-    const roaming = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
-    const local = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-
-    const baseDirs: string[] = [path.join(roaming, 'Claude'), path.join(local, 'Claude')];
-
-    const pkgRoot = path.join(local, 'Packages');
-    try {
-      if (fs.existsSync(pkgRoot)) {
-        for (const pkg of fs.readdirSync(pkgRoot)) {
-          if (!/claude/i.test(pkg)) continue;
-          const roamingInPkg = path.join(pkgRoot, pkg, 'LocalCache', 'Roaming');
-          if (!fs.existsSync(roamingInPkg)) continue;
-          for (const sub of fs.readdirSync(roamingInPkg)) {
-            if (/^claude/i.test(sub)) baseDirs.push(path.join(roamingInPkg, sub));
-          }
-        }
-      }
-    } catch { /* sin permisos o estructura inesperada: se ignora */ }
-
-    // Solo carpetas que existen (no crear configs huérfanos)
-    for (const dir of baseDirs) {
-      if (fs.existsSync(dir)) targets.push(path.join(dir, CONFIG_FILE));
-    }
-    // Fallback: si no se detectó ninguna instalación, la ruta clásica
-    if (targets.length === 0) targets.push(path.join(roaming, 'Claude', CONFIG_FILE));
-  } else if (process.platform === 'darwin') {
-    targets.push(path.join(os.homedir(), 'Library', 'Application Support', 'Claude', CONFIG_FILE));
-  } else {
-    const xdg = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
-    targets.push(path.join(xdg, 'Claude', CONFIG_FILE));
+  startInput();
+  process.stdout.write(prompt);
+  if (pendingLines.length > 0) {
+    const line = pendingLines.shift() as string;
+    process.stdout.write(`${line}\n`);
+    return Promise.resolve(line);
   }
-
-  return [...new Set(targets.map((p) => path.normalize(p)))];
+  if (stdinEnded) {
+    process.stdout.write('\n');
+    return Promise.resolve('');
+  }
+  return new Promise((resolve) => { waiter = resolve; });
 }
 
-function getClaudeCodeConfigPath(): string {
-  return path.join(os.homedir(), '.claude.json');
+async function pause(message = 'Pulsa Enter para cerrar...'): Promise<void> {
+  await question(`\n${message}`);
 }
 
 function allConfigPaths(): string[] {
   return [getClaudeCodeConfigPath(), ...resolveDesktopConfigPaths()];
 }
 
-// ---------- lectura/escritura segura de configs ----------
-function readConfig(configPath: string): Record<string, unknown> | null {
-  if (!fs.existsSync(configPath)) return {};
-  try {
-    const raw = fs.readFileSync(configPath, 'utf-8');
-    return raw.trim() ? JSON.parse(raw) : {};
-  } catch {
-    return null; // JSON inválido: no tocar
-  }
-}
-
-function backupConfig(configPath: string): void {
-  if (!fs.existsSync(configPath)) return;
-  const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  fs.copyFileSync(configPath, `${configPath}.${ts}.bak`);
-}
-
-/** Escritura atómica: temporal + rename, para no dejar un JSON a medias. */
-function writeConfig(configPath: string, data: Record<string, unknown>): void {
-  const tmp = `${configPath}.tmp-${process.pid}`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmp, configPath);
-}
-
-/** Inserta/actualiza la entrada 'holded' en un config de Claude. */
-function registerInConfig(configPath: string, exePath: string, apiKey: string, label: string): boolean {
-  const configDir = path.dirname(configPath);
-  if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });
-
-  const config = readConfig(configPath);
-  if (config === null) {
+/** Registra imprimiendo el resultado (envoltorio de registerServer). */
+function registerInConfig(configPath: string, entry: McpServerEntry, label: string): boolean {
+  const result = registerServer(configPath, entry);
+  if (result === 'invalid-json') {
     err(`${label}: ${configPath} existe pero no es JSON válido. Lo dejo intacto.`);
     return false;
   }
-  backupConfig(configPath);
-
-  if (!config.mcpServers || typeof config.mcpServers !== 'object') config.mcpServers = {};
-  (config.mcpServers as Record<string, unknown>)[MCP_KEY] = {
-    command: exePath,
-    args: ['serve'],
-    env: { HOLDED_API_KEY: apiKey },
-  };
-
-  writeConfig(configPath, config);
   ok(`${label}: registrado en ${configPath}`);
   return true;
 }
 
-/** Elimina la entrada 'holded' de un config de Claude (con backup). */
+/** Elimina imprimiendo el resultado (envoltorio de removeServer). */
 function removeFromConfig(configPath: string, label: string): boolean {
-  if (!fs.existsSync(configPath)) return false;
-  const config = readConfig(configPath);
-  if (config === null) {
+  const result = removeServer(configPath);
+  if (result === 'invalid-json') {
     err(`${label}: ${configPath} no es JSON válido. Lo dejo intacto.`);
     return false;
   }
-  const servers = config.mcpServers as Record<string, unknown> | undefined;
-  if (!servers || !servers[MCP_KEY]) return false;
-
-  backupConfig(configPath);
-  delete servers[MCP_KEY];
-  writeConfig(configPath, config);
-  ok(`${label}: eliminado de ${configPath}`);
-  return true;
-}
-
-/** Busca una API key ya registrada en alguna config (para reutilizarla al actualizar). */
-function findExistingApiKey(): string | null {
-  for (const cfg of allConfigPaths()) {
-    const config = readConfig(cfg);
-    if (!config) continue;
-    const entry = (config.mcpServers as Record<string, any> | undefined)?.[MCP_KEY];
-    const key = entry?.env?.HOLDED_API_KEY;
-    if (typeof key === 'string' && key.length > 0) return key;
+  if (result === 'removed') {
+    ok(`${label}: eliminado de ${configPath}`);
+    return true;
   }
-  return null;
+  return false;
 }
 
 // ---------- API key ----------
@@ -212,7 +152,7 @@ function maskKey(key: string): string {
 
 /** Pide la API key de Holded, con validación suave (32 hex es el formato habitual). */
 async function promptApiKey(): Promise<string | null> {
-  const existing = findExistingApiKey();
+  const existing = findExistingApiKey(allConfigPaths());
   if (existing) {
     const ans = await question(
       `Ya hay una API key registrada (${maskKey(existing)}). Pulsa Enter para mantenerla\n` +
@@ -266,6 +206,19 @@ function regAdd(name: string, type: 'REG_SZ' | 'REG_DWORD', value: string): void
   });
 }
 
+/** Tamaño de la carpeta de instalación en KB (best-effort). */
+function installDirSizeKb(): number {
+  try {
+    let bytes = 0;
+    for (const f of fs.readdirSync(INSTALL_DIR)) {
+      try { bytes += fs.statSync(path.join(INSTALL_DIR, f)).size; } catch { /* ignora */ }
+    }
+    return Math.round(bytes / 1024);
+  } catch {
+    return 0;
+  }
+}
+
 function registerUninstallEntry(exePath: string): void {
   if (process.platform !== 'win32') return;
   try {
@@ -282,6 +235,8 @@ function registerUninstallEntry(exePath: string): void {
     regAdd('URLInfoAbout', 'REG_SZ', REPO_URL);
     regAdd('NoModify', 'REG_DWORD', '1');
     regAdd('NoRepair', 'REG_DWORD', '1');
+    const kb = installDirSizeKb();
+    if (kb > 0) regAdd('EstimatedSize', 'REG_DWORD', String(kb));
   } catch { /* no crítico */ }
 }
 
@@ -306,20 +261,42 @@ function isInstalled(): boolean {
       return true;
     }
   } catch { /* ignora */ }
-  for (const cfg of allConfigPaths()) {
-    const config = readConfig(cfg);
-    const servers = config?.mcpServers as Record<string, unknown> | undefined;
-    if (servers?.[MCP_KEY]) return true;
-  }
-  return false;
+  return allConfigPaths().some((cfg) => getServerEntry(cfg) !== null);
 }
 
-function cmdRegister(exePath: string, apiKey: string): void {
-  registerInConfig(getClaudeCodeConfigPath(), exePath, apiKey, 'Claude Code');
-  const desktopTargets = resolveDesktopConfigPaths();
-  for (const target of desktopTargets) {
-    registerInConfig(target, exePath, apiKey, 'Claude Desktop');
-  }
+interface ConfigTarget {
+  path: string;
+  label: string;
+}
+
+/** Destinos donde registrar, según la elección del usuario. */
+async function chooseTargets(): Promise<ConfigTarget[]> {
+  const code: ConfigTarget = { path: getClaudeCodeConfigPath(), label: 'Claude Code' };
+  const desktop: ConfigTarget[] = resolveDesktopConfigPaths().map((p) => ({
+    path: p, label: 'Claude Desktop',
+  }));
+
+  log('\nDestinos detectados:');
+  log(`  - Claude Code:    ${code.path}`);
+  for (const d of desktop) log(`  - Claude Desktop: ${d.path}`);
+  log('\nDonde quieres registrar el servidor?');
+  log('  [1] En todos (recomendado)');
+  log('  [2] Solo Claude Code');
+  log('  [3] Solo Claude Desktop');
+
+  const ans = (await question('\nElige una opcion (Enter = 1) > ')).trim();
+  if (ans === '2') return [code];
+  if (ans === '3') return desktop;
+  return [code, ...desktop];
+}
+
+function registerTargets(targets: ConfigTarget[], exePath: string, apiKey: string): void {
+  const entry: McpServerEntry = {
+    command: exePath,
+    args: ['serve'],
+    env: { HOLDED_API_KEY: apiKey },
+  };
+  for (const t of targets) registerInConfig(t.path, entry, t.label);
 }
 
 /** Borra binarios antiguos que ya no referencia ninguna config de Claude. */
@@ -327,8 +304,7 @@ function cleanupOldExes(currentExe: string): void {
   try {
     const referenced = new Set<string>();
     for (const cfg of allConfigPaths()) {
-      const config = readConfig(cfg);
-      const cmd = (config?.mcpServers as Record<string, any> | undefined)?.[MCP_KEY]?.command;
+      const cmd = getServerEntry(cfg)?.command;
       if (typeof cmd === 'string') referenced.add(path.resolve(cmd).toLowerCase());
     }
     for (const f of fs.readdirSync(INSTALL_DIR)) {
@@ -396,8 +372,9 @@ async function cmdInstall(): Promise<void> {
 
   // 3. Registrar en Claude (ANTES de limpiar, para que ninguna config quede
   //    apuntando a un binario borrado)
-  step(3, TOTAL, 'Registrando en Claude Code y Claude Desktop');
-  cmdRegister(targetExe, apiKey);
+  step(3, TOTAL, 'Registrando en Claude');
+  const targets = await chooseTargets();
+  registerTargets(targets, targetExe, apiKey);
   cleanupOldExes(targetExe);
 
   // 4. Alta en "Agregar o quitar programas"
@@ -491,8 +468,7 @@ function cmdStatus(): void {
   for (const p of resolveDesktopConfigPaths()) labels.set(p, 'Claude Desktop');
   let found = 0;
   for (const [cfg, label] of labels) {
-    const config = readConfig(cfg);
-    const entry = (config?.mcpServers as Record<string, any> | undefined)?.[MCP_KEY];
+    const entry = getServerEntry(cfg);
     if (entry) {
       found++;
       const key = entry?.env?.HOLDED_API_KEY;
@@ -501,7 +477,7 @@ function cmdStatus(): void {
       log(`     api key: ${typeof key === 'string' ? maskKey(key) : '(no definida)'}`);
     }
   }
-  if (found === 0) warn("No esta registrado en ninguna config de Claude.");
+  if (found === 0) warn('No esta registrado en ninguna config de Claude.');
 }
 
 // ---------- menú ----------
@@ -538,9 +514,10 @@ async function main(): Promise<void> {
       await cmdUninstall();
       process.exit(0);
     case 'register': {
-      const key = findExistingApiKey() ?? (await promptApiKey());
+      const key = findExistingApiKey(allConfigPaths()) ?? (await promptApiKey());
       if (!key) process.exit(1);
-      cmdRegister(targetExePath(), key);
+      const targets = await chooseTargets();
+      registerTargets(targets, targetExePath(), key);
       process.exit(0);
     }
     case 'status':

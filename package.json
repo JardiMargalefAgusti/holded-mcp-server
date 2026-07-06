@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc",
     "build:exe": "node scripts/build-exe.mjs",
+    "test": "tsc && node --test \"build/**/*.test.js\"",
     "dev": "tsc --watch"
   },
   "keywords": [
