@@ -100,16 +100,21 @@ export interface HoldedFunnel {
   [key: string]: unknown;
 }
 
-// CRM: Lead (oportunidad de venta). Esquema permisivo.
+// CRM: Lead (oportunidad de venta). Esquema permisivo, campos observados
+// en la API real (las notas no se devuelven en el GET del lead).
 export interface HoldedLead {
   id: string;
   name: string;
   contactId?: string;
+  contactName?: string;
   funnelId?: string;
   stageId?: string;
   value?: number;
-  notes?: Array<{ noteId?: string; name?: string; description?: string; [key: string]: unknown }>;
-  tasks?: Array<{ taskId?: string; name?: string; [key: string]: unknown }>;
+  potential?: number;
+  dueDate?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  tasks?: Array<{ id?: string; name?: string; desc?: string; [key: string]: unknown }>;
   [key: string]: unknown;
 }
 

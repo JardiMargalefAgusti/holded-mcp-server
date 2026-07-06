@@ -143,11 +143,11 @@ export function registerCrmTools(server: McpServer, client: HoldedClient): void 
 
   server.tool(
     'holded_create_lead',
-    'Crea un nuevo lead (oportunidad) en el CRM de Holded.',
+    'Crea un nuevo lead (oportunidad) en el CRM de Holded. La API exige contacto y embudo.',
     {
       name: z.string().describe('Nombre del lead / oportunidad'),
-      contactId: z.string().optional().describe('ID del contacto asociado'),
-      funnelId: z.string().optional().describe('ID del embudo donde crear el lead'),
+      contactId: z.string().describe('ID del contacto asociado (obligatorio para la API)'),
+      funnelId: z.string().describe('ID del embudo donde crear el lead (obligatorio para la API)'),
       stageId: z.string().optional().describe('ID de la etapa del embudo'),
       value: z.number().optional().describe('Valor económico estimado de la oportunidad'),
       notes: z.string().optional().describe('Notas / descripción del lead'),
@@ -155,9 +155,7 @@ export function registerCrmTools(server: McpServer, client: HoldedClient): void 
     },
     async ({ name, contactId, funnelId, stageId, value, notes, extra }) => {
       try {
-        const body: Record<string, unknown> = { name };
-        if (contactId !== undefined) body.contactId = contactId;
-        if (funnelId !== undefined) body.funnelId = funnelId;
+        const body: Record<string, unknown> = { name, contactId, funnelId };
         if (stageId !== undefined) body.stageId = stageId;
         if (value !== undefined) body.value = value;
         if (notes !== undefined) body.notes = notes;
@@ -181,6 +179,7 @@ export function registerCrmTools(server: McpServer, client: HoldedClient): void 
       stageId: z.string().optional().describe('Nueva etapa del embudo'),
       value: z.number().optional().describe('Nuevo valor económico estimado'),
       notes: z.string().optional().describe('Nuevas notas / descripción'),
+      dueDate: z.number().optional().describe('Fecha de vencimiento en Unix timestamp (segundos)'),
       extra: extraSchema,
     },
     async ({ leadId, extra, ...fields }) => {
@@ -233,18 +232,15 @@ export function registerCrmTools(server: McpServer, client: HoldedClient): void 
 
   server.tool(
     'holded_update_lead_dates',
-    'Actualiza las fechas de un lead del CRM.',
+    'Actualiza la fecha de un lead del CRM. Para cambiar la fecha de vencimiento usa holded_update_lead con dueDate.',
     {
       leadId: z.string().describe('ID del lead'),
-      startDate: z.number().optional().describe('Fecha de inicio en Unix timestamp (segundos)'),
-      endDate: z.number().optional().describe('Fecha de cierre prevista en Unix timestamp (segundos)'),
+      date: z.number().describe('Fecha del lead en Unix timestamp (segundos); la API la exige'),
       extra: extraSchema,
     },
-    async ({ leadId, startDate, endDate, extra }) => {
+    async ({ leadId, date, extra }) => {
       try {
-        const body: Record<string, unknown> = {};
-        if (startDate !== undefined) body.startDate = startDate;
-        if (endDate !== undefined) body.endDate = endDate;
+        const body: Record<string, unknown> = { date };
         if (extra) Object.assign(body, extra);
         const result = await client.updateLeadDates(leadId, body);
         return textResult(result);
@@ -256,17 +252,15 @@ export function registerCrmTools(server: McpServer, client: HoldedClient): void 
 
   server.tool(
     'holded_create_lead_note',
-    'Añade una nota a un lead del CRM.',
+    'Añade una nota a un lead del CRM. La API exige título y contenido.',
     {
       leadId: z.string().describe('ID del lead'),
-      name: z.string().optional().describe('Título de la nota'),
+      title: z.string().describe('Título de la nota (obligatorio para la API)'),
       description: z.string().describe('Contenido de la nota'),
     },
-    async ({ leadId, name, description }) => {
+    async ({ leadId, title, description }) => {
       try {
-        const body: Record<string, unknown> = { description };
-        if (name !== undefined) body.name = name;
-        const result = await client.createLeadNote(leadId, body);
+        const result = await client.createLeadNote(leadId, { title, desc: description });
         return textResult(result);
       } catch (error) {
         return errorResult(error);
@@ -276,19 +270,16 @@ export function registerCrmTools(server: McpServer, client: HoldedClient): void 
 
   server.tool(
     'holded_update_lead_note',
-    'Actualiza una nota existente de un lead del CRM.',
+    'Actualiza una nota existente de un lead del CRM. La API exige título y contenido completos.',
     {
       leadId: z.string().describe('ID del lead'),
-      noteId: z.string().describe('ID de la nota a actualizar'),
-      name: z.string().optional().describe('Nuevo título de la nota'),
-      description: z.string().optional().describe('Nuevo contenido de la nota'),
+      noteId: z.string().describe('ID de la nota a actualizar (lo devuelve la creación)'),
+      title: z.string().describe('Título de la nota'),
+      description: z.string().describe('Contenido de la nota'),
     },
-    async ({ leadId, noteId, name, description }) => {
+    async ({ leadId, noteId, title, description }) => {
       try {
-        const body: Record<string, unknown> = { noteId };
-        if (name !== undefined) body.name = name;
-        if (description !== undefined) body.description = description;
-        const result = await client.updateLeadNote(leadId, body);
+        const result = await client.updateLeadNote(leadId, { noteId, title, desc: description });
         return textResult(result);
       } catch (error) {
         return errorResult(error);
@@ -309,7 +300,7 @@ export function registerCrmTools(server: McpServer, client: HoldedClient): void 
     async ({ leadId, name, description, date, extra }) => {
       try {
         const body: Record<string, unknown> = { name };
-        if (description !== undefined) body.description = description;
+        if (description !== undefined) body.desc = description;
         if (date !== undefined) body.date = date;
         if (extra) Object.assign(body, extra);
         const result = await client.createLeadTask(leadId, body);
@@ -335,7 +326,7 @@ export function registerCrmTools(server: McpServer, client: HoldedClient): void 
       try {
         const body: Record<string, unknown> = { taskId };
         if (name !== undefined) body.name = name;
-        if (description !== undefined) body.description = description;
+        if (description !== undefined) body.desc = description;
         if (date !== undefined) body.date = date;
         if (extra) Object.assign(body, extra);
         const result = await client.updateLeadTask(leadId, body);

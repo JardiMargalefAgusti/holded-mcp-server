@@ -19,7 +19,7 @@ export async function runServer(): Promise<void> {
 
   const server = new McpServer({
     name: 'holded-mcp-server',
-    version: '1.1.0',
+    version: '1.1.1',
   });
 
   registerContactTools(server, client);
