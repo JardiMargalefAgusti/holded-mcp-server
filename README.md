@@ -6,7 +6,7 @@
 
 Servidor MCP (Model Context Protocol) para integrar **[Holded](https://www.holded.com/)** con **Claude Code**, **Claude Desktop** y cualquier cliente MCP compatible.
 
-Expone **43 herramientas** (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos de la API de facturación de Holded, además del módulo **CRM** (leads y embudos de venta).
+Expone **44 herramientas** (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos de la API de facturación de Holded, además del módulo **CRM** (leads y embudos de venta).
 
 Desarrollado por **[APOGEA Consultores](https://apogea.pro/)** (Agustí Jardí).
 
@@ -98,13 +98,14 @@ Añade dentro de `"mcpServers"`:
 
 Reinicia Claude Desktop para que detecte el nuevo servidor.
 
-## Tools disponibles (43)
+## Tools disponibles (44)
 
-### Contactos (3)
+### Contactos (4)
 | Tool | Descripción |
 |------|-------------|
 | `holded_list_contacts` | Lista todos los contactos (clientes, proveedores, etc.) |
 | `holded_get_contact` | Obtiene los detalles de un contacto por su ID |
+| `holded_create_contact` | Crea un contacto (cliente, proveedor, lead...) con NIF, dirección, etc. |
 | `holded_search_contacts` | Busca contactos por nombre (búsqueda parcial) |
 
 ### Productos (2)
@@ -217,7 +218,7 @@ src/
 ├── types/
 │   └── holded.ts         # Interfaces TypeScript
 └── tools/
-    ├── contacts.ts       # 3 tools de contactos
+    ├── contacts.ts       # 4 tools de contactos
     ├── products.ts       # 2 tools de productos
     ├── invoices.ts       # 8 tools de facturas de venta
     ├── purchases.ts      # 7 tools de facturas de compra

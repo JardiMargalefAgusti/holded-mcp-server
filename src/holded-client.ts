@@ -144,6 +144,10 @@ export class HoldedClient {
     return this.request<unknown>(`/contacts/${contactId}`);
   }
 
+  async createContact(body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>('/contacts', { method: 'POST', body });
+  }
+
   // --- Productos ---
 
   async listProducts(): Promise<unknown[]> {
