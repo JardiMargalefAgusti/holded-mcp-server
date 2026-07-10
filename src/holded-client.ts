@@ -1,7 +1,7 @@
 import type { HoldedDocType } from './types/holded.js';
 
 // APIs de Holded soportadas (cada una tiene su propio prefijo de ruta)
-type HoldedApi = 'invoicing' | 'crm';
+type HoldedApi = 'invoicing' | 'crm' | 'team';
 
 export class HoldedClient {
   private static readonly API_ROOT = 'https://api.holded.com/api';
@@ -228,5 +228,32 @@ export class HoldedClient {
 
   async deleteLeadTask(leadId: string, body: Record<string, unknown>): Promise<unknown> {
     return this.request<unknown>(`/leads/${leadId}/tasks`, { method: 'DELETE', body, api: 'crm' });
+  }
+
+  // --- Equipo: empleados y control horario ---
+
+  async listEmployees(): Promise<unknown> {
+    return this.request<unknown>('/employees', { api: 'team' });
+  }
+
+  async getEmployee(employeeId: string): Promise<unknown> {
+    return this.request<unknown>(`/employees/${employeeId}`, { api: 'team' });
+  }
+
+  async getEmployeeTimes(employeeId: string): Promise<unknown> {
+    return this.request<unknown>(`/employees/${employeeId}/times`, { api: 'team' });
+  }
+
+  async createEmployeeTime(employeeId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/employees/${employeeId}/times`, { method: 'POST', body, api: 'team' });
+  }
+
+  async clockIn(employeeId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/employees/${employeeId}/times/clockin`, { method: 'POST', body, api: 'team' });
+  }
+
+  // Ojo: la ruta real es camelCase (clockOut), a diferencia de clockin.
+  async clockOut(employeeId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>(`/employees/${employeeId}/times/clockOut`, { method: 'POST', body, api: 'team' });
   }
 }

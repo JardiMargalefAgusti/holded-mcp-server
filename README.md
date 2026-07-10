@@ -6,7 +6,7 @@
 
 Servidor MCP (Model Context Protocol) para integrar **[Holded](https://www.holded.com/)** con **Claude Code**, **Claude Desktop** y cualquier cliente MCP compatible.
 
-Expone **44 herramientas** (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos de la API de facturación de Holded, además del módulo **CRM** (leads y embudos de venta).
+Expone **50 herramientas** (tools) que cubren: facturas de venta, facturas de compra, presupuestos, contactos y productos de la API de facturación de Holded, el módulo **CRM** (leads y embudos de venta) y el módulo **Equipo** (empleados y control horario).
 
 Desarrollado por **[APOGEA Consultores](https://apogea.pro/)** (Agustí Jardí).
 
@@ -98,7 +98,7 @@ Añade dentro de `"mcpServers"`:
 
 Reinicia Claude Desktop para que detecte el nuevo servidor.
 
-## Tools disponibles (44)
+## Tools disponibles (50)
 
 ### Contactos (4)
 | Tool | Descripción |
@@ -172,6 +172,18 @@ Reinicia Claude Desktop para que detecte el nuevo servidor.
 | `holded_update_lead_task` | Actualiza una tarea de un lead |
 | `holded_delete_lead_task` | Elimina una tarea de un lead |
 
+### Equipo (6)
+| Tool | Descripción |
+|------|-------------|
+| `holded_list_employees` | Lista los empleados del equipo |
+| `holded_get_employee` | Ficha completa de un empleado (contrato, política de ausencias) |
+| `holded_get_employee_times` | Fichajes (control horario) de un empleado |
+| `holded_create_employee_time` | Crea un registro horario (inicio y fin) |
+| `holded_clock_in` | Ficha la entrada de un empleado |
+| `holded_clock_out` | Ficha la salida de un empleado |
+
+> **Nota sobre vacaciones**: la API pública de Holded no expone la gestión de ausencias/vacaciones (solo desde la interfaz web). La ficha del empleado sí incluye su política de ausencias (`timeOffPolicyId`) y quién se las supervisa (`timeOffSupervisors`).
+
 ## Ejemplos de uso
 
 Una vez conectado, puedes hacer peticiones en lenguaje natural a Claude:
@@ -223,7 +235,8 @@ src/
     ├── invoices.ts       # 8 tools de facturas de venta
     ├── purchases.ts      # 7 tools de facturas de compra
     ├── estimates.ts      # 6 tools de presupuestos
-    └── crm.ts            # 17 tools de CRM (leads y embudos)
+    ├── crm.ts            # 17 tools de CRM (leads y embudos)
+    └── team.ts           # 6 tools de equipo (empleados y fichajes)
 ```
 
 ### Stack técnico

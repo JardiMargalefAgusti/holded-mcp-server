@@ -7,6 +7,7 @@ import { registerInvoiceTools } from './tools/invoices.js';
 import { registerPurchaseTools } from './tools/purchases.js';
 import { registerEstimateTools } from './tools/estimates.js';
 import { registerCrmTools } from './tools/crm.js';
+import { registerTeamTools } from './tools/team.js';
 
 export async function runServer(): Promise<void> {
   const apiKey = process.env.HOLDED_API_KEY;
@@ -19,7 +20,7 @@ export async function runServer(): Promise<void> {
 
   const server = new McpServer({
     name: 'holded-mcp-server',
-    version: '1.1.2',
+    version: '1.2.0',
   });
 
   registerContactTools(server, client);
@@ -28,6 +29,7 @@ export async function runServer(): Promise<void> {
   registerPurchaseTools(server, client);
   registerEstimateTools(server, client);
   registerCrmTools(server, client);
+  registerTeamTools(server, client);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

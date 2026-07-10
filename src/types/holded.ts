@@ -118,6 +118,38 @@ export interface HoldedLead {
   [key: string]: unknown;
 }
 
+// Equipo: Empleado (Team API). Esquema permisivo, campos observados en la API
+// real. La API no expone las ausencias: solo la política asignada y supervisores.
+export interface HoldedEmployee {
+  id: string;
+  name: string;
+  lastName?: string;
+  mainEmail?: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  code?: string; // DNI/NIE
+  teamIds?: string[];
+  timeOffPolicyId?: string;
+  timeOffSupervisors?: string[];
+  currentContract?: Record<string, unknown>;
+  terminated?: boolean;
+  [key: string]: unknown;
+}
+
+// Equipo: Registro de control horario (fichaje)
+export interface HoldedTimeTracking {
+  id: string;
+  employeeId: string;
+  employeeName?: string;
+  start: number;
+  end?: number;
+  time?: number;
+  status?: string;
+  approved?: number;
+  [key: string]: unknown;
+}
+
 // Producto/Servicio
 export interface HoldedProduct {
   id: string;
